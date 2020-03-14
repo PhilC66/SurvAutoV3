@@ -17,7 +17,7 @@
 
 	si ??besoin?? activer intruauto dans IntruF() et IntruD() voir PNV2
 	----------------------------------------------
-  V3-101 10/03/2020 pas encore installé
+  V3-102 10/03/2020 pas encore installé
   1 - reprise de V2-22
   2 - correction bug RAZ Fausses alarmes si Alarme en cours
   3 - Installation de la localisation dynamique par GPRS
@@ -27,6 +27,7 @@
       MQTTDATA seul l'adresse serveur est modifiable utiliser MQTTserveur
   4 - dans traite_sms(), Suppression du sms au début avant traitement,
       si traitement long, evite de traiter 2 fois le meme sms
+  5 - enregistrement en EEPROM séparemant de Coefftension(independant de magic)
 
 
 	V2-22 19/11/2019 pas encore installé
@@ -155,8 +156,8 @@
   modification marquées PhC
 */
 
-String ver = "V3-101";
-int Magique = 12;
+String ver = "V3-102";
+int Magique = 13;
 
 #include <Adafruit_FONA.h>			// gestion carte GSM Fona SIM800/808
 #include <Adafruit_MQTT.h>
@@ -167,7 +168,6 @@ int Magique = 12;
 #include <TimeAlarms.h>					// gestion des Alarmes
 #include <avr/wdt.h>						// watchdog uniquement pour Reset
 #include <ArduinoJson.h>
-
 
 /*  FONA_RX       2	==>     mega14 TX3
 		FONA_TX       3	==>     mega15 RX3
@@ -192,7 +192,6 @@ int Magique = 12;
 #define Op_PIR2				28				// Sortie Alimentation PIR2
 #define Op_PIR3				32				// Sortie Alimentation PIR1
 #define Op_PIR4				36				// Sortie Alimentation PIR2
-
 
 #define AIO_USERNAME "TpcfUser" // variables impossible a transferer vers lib ADAFRUIT
 #define AIO_PASS "hU4zHox1iHCDHM2"
@@ -259,10 +258,12 @@ bool    SonnMax   = false;					// temps de sonnerie maxi atteint
 byte 		CptTest   = 12;							// décompteur en mode test si=0 retour tempo normale
 // V2-122
 bool FlagCalibration = false;		    // Calibration Tension en cours
-int			CoeffTensionDefaut = 3100;	// Coefficient par defaut
+int CoeffTensionDefaut = 3100;        // Coefficient par defaut
+int CoeffTension = CoeffTensionDefaut;// Coefficient calibration Tension relu en EEPROM
 int 		TmCptMax 	= 0;							// Temps de la boucle fausses alarme
 int     Nmax			= 0;							// Nombre de fausses alarmes avant alarme
 // V2-122
+
 struct  config_t 										// Structure configuration sauvée en EEPROM
 {
   int 		magic		;									// num magique
@@ -284,7 +285,6 @@ struct  config_t 										// Structure configuration sauvée en EEPROM
   long 		IntruDebut;								// Heure debut Alarme Intru Soir
   int 		Nuit_TmCptMax;						// Nuit Temps de la boucle fausses alarme s
   int 		Nuit_Nmax ;				        // Nuit Nombre de fausses alarmes avant alarme
-  int     CoeffTension;							// Coefficient calibration Tension
   // V2-122
   bool    tracker;                  // tracker ON/OFF
   int     trapide;                  // timer send data rapide (roulage)
@@ -301,18 +301,17 @@ struct  config_t 										// Structure configuration sauvée en EEPROM
   byte    cptAla;                   // Compteur alarmes Tracker avant declenchement
 } config;
 
-byte confign = 0;										// Num enregistrement EEPROM
+byte EEPROM_adresse[3] = {0, 20, 170}; // Adresse EEPROM 0:coefftension,1:log,2:config
 
-typedef struct											// declaration structure  pour les log
+typedef struct        // declaration structure  pour les log
 {
-  char 		dt[10];										//	DateTime 0610-1702 9+1
-  char 		Act[2];										//	Action A/D/S/s 1+1
-  char 		Name[15];									//	14 car
+  char 		dt[10];     //	DateTime 0610-1702 9+1
+  char 		Act[2];     //	Action A/D/S/s 1+1
+  char 		Name[15];   //	14 car
 } champ;
 champ record[5];
 
-byte recordn = 200;									// Num enregistrement EEPROM V2-122
-byte Accu = 0;                      // accumulateur/amortisseur vitesse
+byte Accu = 0;                    // accumulateur/amortisseur vitesse
 
 bool FlagTempoIntru 	= false;		// memorise config.Intru au demarrage
 
@@ -396,9 +395,11 @@ void setup() {
   Serial.begin(9600);											//	Liaison Serie PC ex 115200
   Serial.print(F("Version Soft : ")), Serial.println(ver);
   /* Lecture configuration en EEPROM	 */
-  EEPROM_readAnything(confign, config);
+  EEPROM_readAnything(EEPROM_adresse[0], CoeffTension);
   Alarm.delay(500);	//	V2-19
-  EEPROM_readAnything(recordn, record);
+  EEPROM_readAnything(EEPROM_adresse[1], record);
+  Alarm.delay(500);
+  EEPROM_readAnything(EEPROM_adresse[2], config);
 
   if (config.magic != Magique) {											//V2-14
     /* verification numero magique si different
@@ -427,7 +428,6 @@ void setup() {
     config.IntruDebut		 = 75600; 		// 21h00 75600
     config.Nuit_TmCptMax = 90;       // V2-20 90//60s V2-14
     config.Nuit_Nmax		 = 2;        // V2-14
-    config.CoeffTension  = CoeffTensionDefaut;			// valeur par defaut
     // V2-122
     config.tracker          = true;
     config.trapide          = 15;      // secondes
@@ -454,7 +454,7 @@ void setup() {
     }
     config.Pos_Pn_PB[1] = 1;	// le premier numero du PB par defaut
 
-    int longueur = EEPROM_writeAnything(confign, config);	// ecriture des valeurs par defaut
+    int longueur = EEPROM_writeAnything(EEPROM_adresse[2], config);	// ecriture des valeurs par defaut
     Alarm.delay(350);					//V2-14
     Serial.print(F("longEEPROM1=")), Serial.println(longueur); //long=170
 
@@ -465,7 +465,7 @@ void setup() {
       temp.toCharArray(record[i].Act, 2);
       temp.toCharArray(record[i].Name, 15);
     }
-    longueur = EEPROM_writeAnything(recordn, record);	// ecriture des valeurs par defaut
+    longueur = EEPROM_writeAnything(EEPROM_adresse[1], record);	// ecriture des valeurs par defaut
     Alarm.delay(250);						//V2-14
     Serial.print(F("longEEPROM2=")), Serial.println(longueur); //long=135
   }
@@ -668,7 +668,7 @@ void loop() {
 void AnalyseAlarme() {
   static bool timerlance = false;						//	activation timer alarme 1mn
   if (config.Intru && (CptAlarme1 > 0 || CptAlarme2 > 0 || CptAlarme3 > 0 || CptAlarme4 > 0 )) {
-    if (map(moyenneAnalogique(), 0, 1023, 0, config.CoeffTension) > 1150) { // prise en compte seulement si Vbatt OK, fausse alarme si Vbatt coupée	V2-122
+    if (map(moyenneAnalogique(), 0, 1023, 0, CoeffTension) > 1150) { // prise en compte seulement si Vbatt OK, fausse alarme si Vbatt coupée	V2-122
       if (!timerlance)timerlance = true;				// on lance le timer si pas deja fait
       timecompte ++;	// on incremente le compteur temps Alarme
 
@@ -724,7 +724,7 @@ void Acquisition() {
 
   static byte nalaTension = 0;
   static byte nRetourTension = 0; //V1-16
-  TensionBatterie = map(moyenneAnalogique(), 0, 1023, 0, config.CoeffTension);//3088, X4573=3029, X4545=3128 V2-122
+  TensionBatterie = map(moyenneAnalogique(), 0, 1023, 0, CoeffTension);//3088, X4573=3029, X4545=3128 V2-122
   //Serial.print(F("Tension batterie = ")), Serial.println(TensionBatterie);
   // Regulateur Solaire coupe à 11.2V
   if (TensionBatterie < 1162 ) {// V1-16 V1-12 || TensionBatterie > 1440
@@ -1514,14 +1514,14 @@ FinLSTPOSPN:
         		variables
         		FlagCalibration true cal en cours, false par defaut
         		static int tensionmemo memorisation de la premiere tension mesurée en calibration
-        		int config.CoeffTension = CoeffTensionDefaut 3100 par défaut
+        		int CoeffTension = CoeffTensionDefaut 3100 par défaut
         */
         Sbidon = textesms.substring(12, 16);
         //Serial.print(F("Sbidon=")),Serial.print(Sbidon),Serial.print(","),Serial.println(Sbidon.length());
         if (Sbidon.substring(0, 1) == "0" ) { // debut mode cal
           FlagCalibration = true;
-          config.CoeffTension = CoeffTensionDefaut;
-          TensionBatterie = map(moyenneAnalogique(), 0, 1023, 0, config.CoeffTension);
+          CoeffTension = CoeffTensionDefaut;
+          TensionBatterie = map(moyenneAnalogique(), 0, 1023, 0, CoeffTension);
           // Serial.print("TensionBatterie = "),Serial.println(TensionBatterie);
           tensionmemo = TensionBatterie;
         }
@@ -1529,12 +1529,13 @@ FinLSTPOSPN:
           // si Calibration en cours et valeur entre 0 et 5000
 
           /* calcul nouveau coeff */
-          config.CoeffTension = Sbidon.substring(0, 4).toFloat() / float(tensionmemo) * CoeffTensionDefaut;
-          // Serial.print("Coeff Tension = "),Serial.println(config.CoeffTension);
-          TensionBatterie = map(moyenneAnalogique(), 0, 1023, 0, config.CoeffTension);
+          CoeffTension = Sbidon.substring(0, 4).toFloat() / float(tensionmemo) * CoeffTensionDefaut;
+          // Serial.print("Coeff Tension = "),Serial.println(CoeffTension);
+          TensionBatterie = map(moyenneAnalogique(), 0, 1023, 0, CoeffTension);
           // Serial.print("TensionBatterie = "),Serial.println(TensionBatterie);
           FlagCalibration = false;
-          sauvConfig();															// sauvegarde en EEPROM
+          Serial.print(F("long EEPROM:"));
+          Serial.println(EEPROM_writeAnything(EEPROM_adresse[0], CoeffTension));	// sauvegarde en EEPROM
         }
         message += F("Mode Calib Tension");
         message += fl;
@@ -1542,7 +1543,7 @@ FinLSTPOSPN:
         message += TensionBatterie;
         message += fl;
         message += F("Coeff Tension = ");
-        message += config.CoeffTension;
+        message += CoeffTension;
         //V2-15
         message += fl;
         message += F("Batterie = ");
@@ -2464,9 +2465,10 @@ void SignalVie() {
 //---------------------------------------------------------------------------
 void sauvConfig() {
   // Sauvegarde config en EEPROM
-  byte n = EEPROM_writeAnything(confign, config);		//	ecriture EEPROM
+  Serial.print(F("long EEPROM:"));
+  Serial.println(EEPROM_writeAnything(EEPROM_adresse[2], config));		//	ecriture EEPROM
   Alarm.delay(100);
-  EEPROM_readAnything(confign, config);
+  EEPROM_readAnything(EEPROM_adresse[2], config);
   Alarm.delay(500);	// V2-19
 }
 //---------------------------------------------------------------------------
@@ -2639,7 +2641,7 @@ void logRecord(String nom, String action) { // renseigne log et enregistre EEPRO
   nom   .toCharArray(record[index].Name, 15);
   action.toCharArray(record[index].Act, 2);
 
-  int longueur = EEPROM_writeAnything(recordn, record);// enregistre en EEPROM
+  int longueur = EEPROM_writeAnything(EEPROM_adresse[1], record);// enregistre en EEPROM
 
   if (index < 4) {
     index ++;
@@ -2816,7 +2818,7 @@ void PrintEEPROM() {
   Serial.print(F("config.IntruDebut = "))		, Serial.println(config.IntruDebut);
   Serial.print(F("config.Nuit_TmCptMax = ")), Serial.println(config.Nuit_TmCptMax);
   Serial.print(F("config.Nuit_Nmax = "))		, Serial.println(config.Nuit_Nmax);
-  Serial.print(F("config.CoeffTension = "))	, Serial.println(config.CoeffTension);
+  Serial.print(F("CoeffTension = "))	      , Serial.println(CoeffTension);
   Serial.print(F("apn = "))                 , Serial.println(config.apn);
   Serial.print(F("gprsUser = "))            , Serial.println(config.gprsUser);
   Serial.print(F("gprspass = "))            , Serial.println(config.gprsPass);
@@ -2872,7 +2874,6 @@ sortie:
     Alarm.delay(1000);				//	Attendre cx reseau apres SIM unlock
   }
   else {
-
     return;	// sortie direct si SIM OK
   }
   // si sortie avec carte SIM pas deverrouillée; pb lancement module GSM
@@ -3031,13 +3032,6 @@ void senddata() {
     if (!mqtt.connected()) {
       byte cpt = 0;
       bool GPRSconnected = true;
-      Serial.println(F("Retrying FONA"));
-      // a securiser
-      // if (cpt++ > 4) {
-      // GPRSconnected = false;
-      // break;
-      // }
-      // }
       while (!fona.enableGPRS(true)) {
         Serial.println(F("Retrying FONA"));
         if (cpt++ > 4) {
