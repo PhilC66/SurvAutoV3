@@ -1,12 +1,12 @@
 /*
   10/03/2020
   IDE 1.8.10, AVR boards 1.8.1, PC fixe
-	Le croquis utilise 72744 octets (28%)
-	Les variables globales utilisent 2544 octets (31%) de mémoire dynamique
+	Le croquis utilise 72798 octets (28%)
+	Les variables globales utilisent 2546 octets (31%) de mémoire dynamique
 
 	IDE 1.8.10 Raspi, AVR boards 1.8.1
-	Le croquis utilise 46990 octets (18%)
-	Les variables globales utilisent 1653 octets (20%) de mémoire dynamique
+	Le croquis utilise 72798 octets (28%)
+	Les variables globales utilisent 2546 octets (31%) de mémoire dynamique
 
 	Philippe CORBEL
 	10/03/2020
@@ -702,7 +702,9 @@ void AnalyseAlarme() {
       CptAlarme4 = 0; // si batterie coupée efface alarme
     }
   }
-
+  digitalWrite(led, HIGH);	// voyant activité
+  Alarm.delay(20);
+  digitalWrite(led, LOW);
 }
 //---------------------------------------------------------------------------
 void Acquisition() {
@@ -839,9 +841,6 @@ void Acquisition() {
     softReset();					//	redemarrage Arduino
   }
 
-  digitalWrite(led, HIGH);	// voyant activité
-  Alarm.delay(100);
-  digitalWrite(led, LOW);
   Serial.print(F("freeRAM=")), Serial.println(freeRam());
   // V1-12 - V1-13
   Serial.print(F("CptTempo = ")), Serial.print(timecompte);
@@ -890,6 +889,7 @@ void Acquisition() {
         nalaMQTT --;
       } else {
         FlagAlarmeMQTT = false;
+        FlagAlarmeGprs = false;
       }
     }
   }
@@ -1653,7 +1653,7 @@ FinLSTPOSPN:
             config.tlent = i;
             sauvConfig();													// sauvegarde en EEPROM
             Alarm.disable(Send);
-            Send = Alarm.timerRepeat(config.tlent, senddata); // send data
+            // Send = Alarm.timerRepeat(config.tlent, senddata); // send data
             Alarm.write(Send, config.tlent);
           }
         }
@@ -1669,7 +1669,7 @@ FinLSTPOSPN:
             config.trapide = i;
             sauvConfig();													// sauvegarde en EEPROM
             Alarm.disable(Send);
-            Send = Alarm.timerRepeat(config.trapide, senddata); // Send data
+            // Send = Alarm.timerRepeat(config.trapide, senddata); // Send data
             Alarm.write(Send, config.trapide);
           }
         }
@@ -1705,6 +1705,7 @@ FinLSTPOSPN:
             config.tracker = true;
             sauvConfig();																// sauvegarde en EEPROM
             if (!config.Intru) {
+              Alarm.disable(Send);
               Alarm.write(Send, config.tlent);
               senddata(); // active la localisation
             }
