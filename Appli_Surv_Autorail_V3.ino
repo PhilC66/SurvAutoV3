@@ -1,11 +1,11 @@
 /*
   10/03/2020
   IDE 1.8.10, AVR boards 1.8.1, PC fixe
-	Le croquis utilise 72798 octets (28%)
+	Le croquis utilise 72828 octets (28%)
 	Les variables globales utilisent 2546 octets (31%) de mémoire dynamique
 
 	IDE 1.8.10 Raspi, AVR boards 1.8.1
-	Le croquis utilise 72798 octets (28%)
+	Le croquis utilise 72804 octets (28%)
 	Les variables globales utilisent 2546 octets (31%) de mémoire dynamique
 
 	Philippe CORBEL
@@ -1238,7 +1238,10 @@ fin_i:
         generationMessage();
         sendSMSReply(callerIDbuffer, sms);
 
-        if (config.tracker) senddata(); // active localisation
+        if (config.tracker){
+          senddata(); // active localisation
+          Alarm.write(Send, config.tlent);          
+        }
         //if(!sms){//V2-14
         //Sbidon = F("console");
         //Sbidon.toCharArray(nameIDbuffer,8);	//	si commande locale
@@ -2293,7 +2296,8 @@ void MajHeure() {
     if (abs(ecart) > 5) {
       Alarm.disable(loopPrincipale);
       // V2-17
-      ArretSonnerie();	// Arret Sonnerie propre correction bug blocagealarme
+      // ArretSonnerie();	// Arret Sonnerie propre correction bug blocagealarme
+      ResetSonnerie();
       // V2-17
       Alarm.disable(TSonn);						// les tempos sonnerie sont coupées au cas ou active à ce moment là
       Alarm.disable(TSonnMax);				// mais elles ne sont pas réarmées, elles le seront si nouvelles alarme
@@ -3046,7 +3050,7 @@ void senddata() {
         MQTT_connect(); // connexion MQTT
         Alarm.delay(1000);
       }
-    } else {
+    } //else {
       if (! MQTT_data.publish(JSONmessageBuffer)) {// envoie data MQTT
         Serial.println(F("mqtt connect Failed"));
       } else {
@@ -3054,7 +3058,7 @@ void senddata() {
         AlarmeMQTT = false;
         AlarmeGprs = false;
       }
-    }
+    //}
   }
   else {
     AlarmeGps = true;
