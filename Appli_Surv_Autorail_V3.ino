@@ -1,8 +1,8 @@
 /*
   10/03/2020
   IDE 1.8.10, AVR boards 1.8.1, PC fixe
-	Le croquis utilise 72828 octets (28%)
-	Les variables globales utilisent 2546 octets (31%) de mémoire dynamique
+	Le croquis utilise 73222 octets (28%)
+	Les variables globales utilisent 2545 octets (31%) de mémoire dynamique
 
 	IDE 1.8.10 Raspi, AVR boards 1.8.1
 	Le croquis utilise 72804 octets (28%)
@@ -27,7 +27,7 @@
       MQTTDATA seul l'adresse serveur est modifiable utiliser MQTTserveur
   4 - dans traite_sms(), Suppression du sms au début avant traitement,
       si traitement long, evite de traiter 2 fois le meme sms
-  5 - enregistrement en EEPROM séparemant de Coefftension(independant de magic)
+  5 - enregistrement en EEPROM séparement de Coefftension(independant de magic)
 
 
 	V2-22 19/11/2019 pas encore installé
@@ -156,7 +156,7 @@
   modification marquées PhC
 */
 
-String ver = "V3-102";
+String ver = "V3-103";
 int Magique = 13;
 
 #include <Adafruit_FONA.h>			// gestion carte GSM Fona SIM800/808
@@ -938,11 +938,11 @@ void traite_sms(byte slot) {	// traitement du SMS par slot
     }
     textesms = String(replybuffer);
     Serial.print(F("texte du SMS=")), Serial.println(textesms);
-    for (byte i = 0; i < textesms.length(); i++) {
-      if ((int)textesms[i] < 0 || (int)textesms[i] > 127) { // caracteres accentués interdit
-        goto sortir;
-      }
-    }
+    // for (byte i = 0; i < textesms.length(); i++) {
+      // if ((int)textesms[i] < 0 || (int)textesms[i] > 127) { // caracteres accentués interdit
+        // goto sortir;
+      // }
+    // }
     /* Suppression du SMS */
     if (sms) {
       if (fona.deleteSMS(slot)) {
@@ -1240,7 +1240,8 @@ fin_i:
 
         if (config.tracker){
           senddata(); // active localisation
-          Alarm.write(Send, config.tlent);          
+          Alarm.write(Send, config.tlent);
+          Accu = 255;
         }
         //if(!sms){//V2-14
         //Sbidon = F("console");
@@ -2022,7 +2023,7 @@ FinLSTPOSPN:
     else {
       Serial.print(F("Appelant non reconnu ! ")), Serial.println(callerIDbuffer);
     }
-sortir:
+// sortir:
     Serial.println("")		; /* indispensable apres xxxx: */
     flushSerial();
   }
@@ -2452,6 +2453,7 @@ void OnceOnly() {
   }
   if (config.Pos_PN)envoieGroupeSMS(1);	//  envoie message etat apres lancement à liste pref
   if (!config.Intru && config.tracker) {
+    Accu = 255;
     Alarm.write(Send, config.tlent);
     Alarm.delay(1000); // attendre envoie sms ci-dessus
     senddata();
