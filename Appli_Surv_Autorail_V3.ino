@@ -1,12 +1,12 @@
 /*
-  10/03/2020
+  05/05/2020
   IDE 1.8.10, AVR boards 1.8.1, PC fixe
-	Le croquis utilise 73222 octets (28%)
-	Les variables globales utilisent 2545 octets (31%) de mémoire dynamique
+	Le croquis utilise 72952 octets (28%)
+	Les variables globales utilisent 2640 octets (32%) de mémoire dynamique
 
 	IDE 1.8.10 Raspi, AVR boards 1.8.1
-	Le croquis utilise 72804 octets (28%)
-	Les variables globales utilisent 2546 octets (31%) de mémoire dynamique
+	Le croquis utilise 72926 octets (28%)
+	Les variables globales utilisent 2614 octets (31%) de mémoire dynamique
 
 	Philippe CORBEL
 	10/03/2020
@@ -18,6 +18,7 @@
 	si ??besoin?? activer intruauto dans IntruF() et IntruD() voir PNV2
 	----------------------------------------------
   V3-102 10/03/2020 pas encore installé
+  !!!!! Version carte SIM sans codePIN !!!!!
   1 - reprise de V2-22
   2 - correction bug RAZ Fausses alarmes si Alarme en cours
   3 - Installation de la localisation dynamique par GPRS
@@ -28,6 +29,7 @@
   4 - dans traite_sms(), Suppression du sms au début avant traitement,
       si traitement long, evite de traiter 2 fois le meme sms
   5 - enregistrement en EEPROM séparement de Coefftension(independant de magic)
+  6 - suppression code PIN SIM et verif cnx reseau
 
 
 	V2-22 19/11/2019 pas encore installé
@@ -243,7 +245,7 @@ bool AlarmeGps          = false;
 bool FlagLastAlarmeGps  = false;
 bool lancement          = false;    // passe a true apres lancement
 
-bool FlagReset 							= false;	//	Reset demandé=True
+bool FlagReset 					= false;	  //	Reset demandé=True
 long TensionBatterie;									//	Tension Batterie solaire 12V
 
 byte Ntwk_dcx = 0;										//	compteur deconnexion reseau
@@ -393,6 +395,7 @@ void setup() {
   message.reserve(140);										// texte des SMS
   while (!Serial);
   Serial.begin(9600);											//	Liaison Serie PC ex 115200
+  Serial.println(__FILE__);
   Serial.print(F("Version Soft : ")), Serial.println(ver);
   /* Lecture configuration en EEPROM	 */
   EEPROM_readAnything(EEPROM_adresse[0], CoeffTension);
@@ -429,18 +432,18 @@ void setup() {
     config.Nuit_TmCptMax = 90;       // V2-20 90//60s V2-14
     config.Nuit_Nmax		 = 2;        // V2-14
     // V2-122
-    config.tracker          = true;
+    config.tracker          = false;
     config.trapide          = 15;      // secondes
     config.tlent            = 15 * 60; // secondes
     config.vtransition      = 2;       // kmh
     String tempapn          = "free";//"sl2sfr";//"free";
     String tempUser         = "";
     String tempPass         = "";
-    String tempmqttServer   = "philippeco.hopto.org";//exploitation.tpcf.fr
-    String tempmqttUserName = "TpcfUser";
-    String tempmqttPass     = "hU4zHox1iHCDHM2";
-    String temptopic        = "localisation";
-    config.mqttPort         = 5335;//1883
+    String tempmqttServer   = "exploitation.tpcf.fr";//"philippeco.hopto.org";
+    String tempmqttUserName = "TpcfUser";        // pas utilisé
+    String tempmqttPass     = "hU4zHox1iHCDHM2"; // pas utilisé
+    String temptopic        = "localisation";    // pas utilisé
+    config.mqttPort         = 5335;//1883        // pas utilisé
     config.cptAla           = 10; // 11*Acquisition time
     tempapn.toCharArray(config.apn, (tempapn.length() + 1));
     tempUser.toCharArray(config.gprsUser, (tempUser.length() + 1));
@@ -555,7 +558,7 @@ void setup() {
   fona.getNetworkName(replybuffer, 15);
   Serial.print(F("Operateur :")), Serial.println(replybuffer);
   Serial.println(fona.enableNetworkTimeSync(true));
-  Serial.println(fona.enableRTC(1));
+  // Serial.println(fona.enableRTC(1));
 
   message = "";
   read_RSSI();									 // Niveau reseau
@@ -712,17 +715,21 @@ void Acquisition() {
   //	boucle acquisition
   Serial.print("speed="), Serial.println(speed);
   displayTime(false);
+  
+  // NE PAS SUPPRIMER CETTE LIGNE
   VerifSIM();	// V2-14  verif si SIM OK
+  // incomprehensible, si supprimée, MQTT KO
+  
   // verification si toujours connecté au réseau
-  byte n = fona.getNetworkStatus();
-  if (!(n == 1 || n == 5)) {	//	si pas connecté reseau doit etre 1 ou 5
-    Ntwk_dcx++;
-    Alarm.delay(200);
-    if (Ntwk_dcx > 20) {
-      Serial.print(F("Pas de reseau ! ")), Serial.println(n); // 13/03/2018
+  // byte n = fona.getNetworkStatus();
+  // if (!(n == 1 || n == 5)) {	//	si pas connecté reseau doit etre 1 ou 5
+    // Ntwk_dcx++;
+    // Alarm.delay(200);
+    // if (Ntwk_dcx > 20) {
+      // Serial.print(F("Pas de reseau ! ")), Serial.println(n); // 13/03/2018
       //softReset();					//	redemarrage Arduino apres 100 tentatives
-    }
-  }
+    // }
+  // }
 
   static byte nalaTension = 0;
   static byte nRetourTension = 0; //V1-16
@@ -2863,21 +2870,21 @@ void VerifSIM() {	// V2-14 verif SIM et deverrouillage
   fona.enableGPS(true);			// 13/03/2018
   if (!fona.getetatSIM()) {	// Si carte SIM not READY, Envoyé PIN
     flushSerial();
-    //if (fona.getetatSIM()){ goto sortie;}// 13/03/2018 deuxieme essai si ok on sort ne marche pas?
-    char PIN[5] = "1234";
-    byte retries = 1;
-    if (! fona.unlockSIM(PIN)) {
-      Serial.println(F("Failed to unlock SIM"));
-      retries++;
-      Alarm.delay(1000);
-      if (retries == 3) {
-        goto sortie;					// 2 tentatives max
-      }
-    }
-    else {
-      Serial.println(F("OK SIM Unlock"));
-    }
-sortie:
+    // //if (fona.getetatSIM()){ goto sortie;}// 13/03/2018 deuxieme essai si ok on sort ne marche pas?
+    // char PIN[5] = "1234";
+    // byte retries = 1;
+    // if (! fona.unlockSIM(PIN)) {
+      // Serial.println(F("Failed to unlock SIM"));
+      // retries++;
+      // Alarm.delay(1000);
+      // if (retries == 3) {
+        // goto sortie;					// 2 tentatives max
+      // }
+    // }
+    // else {
+      // Serial.println(F("OK SIM Unlock"));
+    // }
+// sortie:
     Alarm.delay(1000);				//	Attendre cx reseau apres SIM unlock
   }
   else {
@@ -2886,7 +2893,10 @@ sortie:
   // si sortie avec carte SIM pas deverrouillée; pb lancement module GSM
   // pb batterie GSM
   // if (!fona.getetatSIM()) softReset();// ligne supprimée V2-20, V2-14
+  
+  // NE PAS SUPPRIMER
   ResetSIM800();// V2-20
+  // NE PAS SUPPRIMER
 }
 //---------------------------------------------------------------------------
 int Battpct(long vbat) {
@@ -3085,7 +3095,7 @@ void MQTT_connect() {
     Serial.println(mqtt.connectErrorString(ret));
     Serial.println(F("Retrying MQTT connection in 5 seconds..."));
     mqtt.disconnect();
-    delay(5000);  // wait 5 seconds
+    Alarm.delay(5000);  // wait 5 seconds
     if (cptmqtt ++ > 4) {
       AlarmeMQTT = true;
 
