@@ -17,7 +17,8 @@
 
 	si ??besoin?? activer intruauto dans IntruF() et IntruD() voir PNV2
 	----------------------------------------------
-  V3-102 10/03/2020 pas encore installé
+  
+  V3-102 10/03/2020 installé 14/05/2020 X3944, X4554
   !!!!! Version carte SIM sans codePIN !!!!!
   1 - reprise de V2-22
   2 - correction bug RAZ Fausses alarmes si Alarme en cours
