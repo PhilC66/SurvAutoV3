@@ -1,11 +1,11 @@
 /*
-  05/05/2020
+  08/07/2020
   IDE 1.8.10, AVR boards 1.8.1, PC fixe
-	Le croquis utilise 72952 octets (28%)
+	Le croquis utilise 72910 octets (28%)
 	Les variables globales utilisent 2640 octets (32%) de mémoire dynamique
 
 	IDE 1.8.10 Raspi, AVR boards 1.8.1
-	Le croquis utilise 72926 octets (28%)
+	Le croquis utilise 72884 octets (28%)
 	Les variables globales utilisent 2614 octets (31%) de mémoire dynamique
 
 	Philippe CORBEL
@@ -18,7 +18,10 @@
 	si ??besoin?? activer intruauto dans IntruF() et IntruD() voir PNV2
 	----------------------------------------------
   
-  V3-102 10/03/2020 installé 14/05/2020 X3944, X4554
+  V3-104 08/07/2020
+  bug tracker timerlent/timerrapide
+
+  V3-103 10/03/2020 installé 14/05/2020 X3944, X4554
   !!!!! Version carte SIM sans codePIN !!!!!
   1 - reprise de V2-22
   2 - correction bug RAZ Fausses alarmes si Alarme en cours
@@ -159,7 +162,7 @@
   modification marquées PhC
 */
 
-String ver = "V3-103";
+String ver = "V3-104";
 int Magique = 13;
 
 #include <Adafruit_FONA.h>			// gestion carte GSM Fona SIM800/808
@@ -2324,9 +2327,9 @@ void MajHeure() {
       Alarm.write(HIntruD, config.IntruDebut);
       Alarm.write(HIntruF, config.IntruFin);
       Alarm.write(Analyse, 1);
-      if (config.tracker && !config.Intru) {
-        Alarm.write(Send, config.tlent);
-      }
+      // if (config.tracker && !config.Intru) {
+        // Alarm.write(Send, config.tlent);
+      // }
       //Serial.print(F("Correction seconde = ")), Serial.println(ecart);
     }
   }
