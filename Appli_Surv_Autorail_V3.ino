@@ -1,12 +1,12 @@
 /*
-  08/07/2020
+  25/07/2020
   IDE 1.8.10, AVR boards 1.8.1, PC fixe
-	Le croquis utilise 72910 octets (28%)
-	Les variables globales utilisent 2640 octets (32%) de mémoire dynamique
+	Le croquis utilise 72832 octets (28%)
+	Les variables globales utilisent 2641 octets (32%) de mémoire dynamique
 
 	IDE 1.8.10 Raspi, AVR boards 1.8.1
-	Le croquis utilise 72884 octets (28%)
-	Les variables globales utilisent 2614 octets (31%) de mémoire dynamique
+	Le croquis utilise 72806 octets (28%)
+	Les variables globales utilisent 2615 octets (31%) de mémoire dynamique
 
 	Philippe CORBEL
 	10/03/2020
@@ -18,6 +18,11 @@
 	si ??besoin?? activer intruauto dans IntruF() et IntruD() voir PNV2
 	----------------------------------------------
   
+  V3-105 25/07/2020 installé Picasso
+  bug affichage compteurmax
+  correction gereCadence
+  correction connexion mqtt, evite boucle bloquante
+
   V3-104 08/07/2020
   bug tracker timerlent/timerrapide
 
@@ -162,7 +167,7 @@
   modification marquées PhC
 */
 
-String ver = "V3-104";
+String ver = "V3-105";
 int Magique = 13;
 
 #include <Adafruit_FONA.h>			// gestion carte GSM Fona SIM800/808
@@ -1465,7 +1470,7 @@ FinLSTPOSPN:
         message += F("Actuel n = ");
         message += Nmax;
         message += F(", t = ");
-        message += TmCptMax / 10;
+        message += TmCptMax;
         message += F("(s)");
         sendSMSReply(callerIDbuffer, sms);
       }
@@ -2889,7 +2894,7 @@ void VerifSIM() {	// V2-14 verif SIM et deverrouillage
       // Serial.println(F("OK SIM Unlock"));
     // }
 // sortie:
-    Alarm.delay(1000);				//	Attendre cx reseau apres SIM unlock
+    // Alarm.delay(1000);				//	Attendre cx reseau apres SIM unlock
   }
   else {
     return;	// sortie direct si SIM OK
@@ -3086,27 +3091,37 @@ void MQTT_connect() {
   // Function to connect and reconnect as necessary to the MQTT server.
   // Should be called in the loop function and it will take care if connecting.
   int8_t ret;
-
+  static byte cptmqtt = 0;
   // Stop if already connected.
   if (mqtt.connected()) {
     AlarmeMQTT = false;
+    cptmqtt = 0;
     return;
   }
 
   Serial.print(F("Connecting to MQTT... "));
-  byte cptmqtt = 0;
-  while ((ret = mqtt.connect()) != 0) { // connect will return 0 for connected
+  
+  if((ret = mqtt.connect()) != 0){ // connect will return 0 for connected
     Serial.println(mqtt.connectErrorString(ret));
-    Serial.println(F("Retrying MQTT connection in 5 seconds..."));
-    mqtt.disconnect();
-    Alarm.delay(5000);  // wait 5 seconds
     if (cptmqtt ++ > 4) {
       AlarmeMQTT = true;
-
-      break;
     }
+    mqtt.disconnect();
+  } else{
+    Serial.println(F("MQTT Connected!"));
   }
-  Serial.println(F("MQTT Connected!"));
+  // while ((ret = mqtt.connect()) != 0) { // connect will return 0 for connected
+    // Serial.println(mqtt.connectErrorString(ret));
+    // Serial.println(F("Retrying MQTT connection in 5 seconds..."));
+    // mqtt.disconnect();
+    // Alarm.delay(5000);  // wait 5 seconds
+    // if (cptmqtt ++ > 4) {
+      // AlarmeMQTT = true;
+
+      // break;
+    // }
+  // }
+  // Serial.println(F("MQTT Connected!"));
 }
 //---------------------------------------------------------------------------
 void gereCadence() {
@@ -3122,6 +3137,7 @@ void gereCadence() {
       if (Accu < 10)Accu = 0;
     }
   }
+  if(speed == 0 && Accu < 10) Accu = 0;
   if (Accu == 0 && lastroule == true) {
     lastroule = false;
     Alarm.disable(Send);
