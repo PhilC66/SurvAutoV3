@@ -1,12 +1,12 @@
 /*
   25/07/2020
   IDE 1.8.10, AVR boards 1.8.1, PC fixe
-	Le croquis utilise 72832 octets (28%)
-	Les variables globales utilisent 2641 octets (32%) de mémoire dynamique
+	Le croquis utilise 72590 octets (28%)
+	Les variables globales utilisent 2627 octets (32%) de mémoire dynamique
 
 	IDE 1.8.10 Raspi, AVR boards 1.8.1
-	Le croquis utilise 72806 octets (28%)
-	Les variables globales utilisent 2615 octets (31%) de mémoire dynamique
+	Le croquis utilise 72564 octets (28%)
+	Les variables globales utilisent 2601 octets (31%) de mémoire dynamique
 
 	Philippe CORBEL
 	10/03/2020
@@ -19,6 +19,7 @@
 	----------------------------------------------
   
   V3-105 25/07/2020 installé Picasso
+  suppression total CPIN=cpin
   bug affichage compteurmax
   correction gereCadence
   correction connexion mqtt, evite boucle bloquante
@@ -2989,24 +2990,24 @@ void ResetSIM800() { // V2-19
   Alarm.delay(1000);
   fonaSerial -> println(F("AT+CLTS=1"));
   fonaSerial -> println(F("AT+CENG=3"));
-  if (!fona.getetatSIM()) {	// Si carte SIM not READY, Envoyé PIN
-    flushSerial();
-    char PIN[5] = "1234";
-    byte retries = 1;
-    if (! fona.unlockSIM(PIN)) {
-      Serial.println(F("Failed to unlock SIM"));
-      retries++;
-      Alarm.delay(1000);
-      if (retries == 3) {
-        goto sortie;					// 2 tentatives max
-      }
-    }
-    else {
-      Serial.println(F("OK SIM Unlock"));
-    }
-sortie:
-    Alarm.delay(1000);				//	Attendre cx reseau apres SIM unlock
-  }
+//  if (!fona.getetatSIM()) {	// Si carte SIM not READY, Envoyé PIN
+//    flushSerial();
+//    char PIN[5] = "1234";
+//    byte retries = 1;
+//    if (! fona.unlockSIM(PIN)) {
+//      Serial.println(F("Failed to unlock SIM"));
+//      retries++;
+//      Alarm.delay(1000);
+//      if (retries == 3) {
+//        goto sortie;					// 2 tentatives max
+//      }
+//    }
+//    else {
+//      Serial.println(F("OK SIM Unlock"));
+//    }
+//sortie:
+//    Alarm.delay(1000);				//	Attendre cx reseau apres SIM unlock
+//  }
 }
 //--------------------------------------------------------------------------------//
 void gereVoyant() {
