@@ -1,12 +1,12 @@
 /*
-  25/07/2020
+  29/08/2020
   IDE 1.8.10, AVR boards 1.8.1, PC fixe
-	Le croquis utilise 72590 octets (28%)
-	Les variables globales utilisent 2627 octets (32%) de mémoire dynamique
+	Le croquis utilise 72552 octets (28%)
+	Les variables globales utilisent 2623 octets (32%) de mémoire dynamique
 
 	IDE 1.8.10 Raspi, AVR boards 1.8.1
-	Le croquis utilise 72564 octets (28%)
-	Les variables globales utilisent 2601 octets (31%) de mémoire dynamique
+	Le croquis utilise 72526 octets (28%)
+	Les variables globales utilisent 2597 octets (31%) de mémoire dynamique
 
 	Philippe CORBEL
 	10/03/2020
@@ -17,6 +17,12 @@
 
 	si ??besoin?? activer intruauto dans IntruF() et IntruD() voir PNV2
 	----------------------------------------------
+  
+  V3-11 29/08/2020 installé boitier de test
+  03/09/2020 installé X4573
+  Calibration par sms possible(installé X4573 le 28/08/2020)
+  suppression divisé /10 sur affichage timer alarme bug suite changement de methode timer
+  nouveau magique, nouveau param par défaut
   
   V3-105 25/07/2020 installé Picasso
   suppression total CPIN=cpin
@@ -168,8 +174,8 @@
   modification marquées PhC
 */
 
-String ver = "V3-105";
-int Magique = 13;
+String ver = "V3-11";
+int Magique = 15;
 
 #include <Adafruit_FONA.h>			// gestion carte GSM Fona SIM800/808
 #include <Adafruit_MQTT.h>
@@ -427,13 +433,13 @@ void setup() {
     config.Dsonn				 = 60;
     config.DsonnMax			 = 90;
     config.Dsonnrepos    = 120;
-    config.Jour_TmCptMax = 60;// V2-20 60// 30s // V2-14
-    config.Jour_Nmax		 = 3;						// V2-14
+    config.Jour_TmCptMax = 90;// V2-20 60// 30s // V2-14
+    config.Jour_Nmax		 = 2;						// V2-14
     config.PirActif[0]   = 1; // tous les capteurs PIR sont actif par défaut
     config.PirActif[1]   = 1;
     config.PirActif[2]   = 1;
     config.PirActif[3]   = 1;
-    String temp 				 =	"TPCF_X4546";
+    String temp 				 =	"TPCF_X4500";
     temp.toCharArray(config.Idchar, 11);
     // V2-122
     config.IntruAuto		 = true;			// pas utilisé
@@ -444,7 +450,7 @@ void setup() {
     // V2-122
     config.tracker          = false;
     config.trapide          = 15;      // secondes
-    config.tlent            = 15 * 60; // secondes
+    config.tlent            = 15;// * 60; // secondes
     config.vtransition      = 2;       // kmh
     String tempapn          = "free";//"sl2sfr";//"free";
     String tempUser         = "";
@@ -1520,7 +1526,7 @@ FinLSTPOSPN:
 
         sendSMSReply(callerIDbuffer, sms);
       }
-      else if (!sms && textesms.indexOf(F("CALIBRATION=")) == 0) {
+      else if (textesms.indexOf(F("CALIBRATION=")) == 0) {
         /* 	Mode calibration mesure tension V2-122
         		Seulement en mode serie local
         		recoit message "CALIBRATION=0000"
@@ -2136,7 +2142,7 @@ void generationMessage() {
     //V2-20
     message += fl;
     message += F("Timer (s)= ");
-    message += timecomptememo / 10;
+    message += timecomptememo;// /10
     //V2-20
   }
   message += fl;
