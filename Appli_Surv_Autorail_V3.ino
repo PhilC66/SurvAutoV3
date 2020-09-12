@@ -20,6 +20,7 @@
   
   V3-11 29/08/2020 installé boitier de test
   03/09/2020 installé X4573
+  11/09/2020 installé X4545,4554,4607,3944
   Calibration par sms possible(installé X4573 le 28/08/2020)
   suppression divisé /10 sur affichage timer alarme bug suite changement de methode timer
   nouveau magique, nouveau param par défaut
