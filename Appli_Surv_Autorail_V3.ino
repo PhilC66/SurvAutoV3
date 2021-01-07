@@ -1,12 +1,10 @@
 /*
   29/08/2020
   IDE 1.8.10, AVR boards 1.8.1, PC fixe
-	Le croquis utilise 72552 octets (28%)
-	Les variables globales utilisent 2623 octets (32%) de mémoire dynamique
+	Le croquis utilise 72570 octets (28%), 2649 octets (32%) de mémoire dynamique
 
-	IDE 1.8.10 Raspi, AVR boards 1.8.1
-	Le croquis utilise 72526 octets (28%)
-	Les variables globales utilisent 2597 octets (31%) de mémoire dynamique
+	IDE 1.8.10 Raspi, AVR boards 1.8.1, Raspi
+	Le croquis utilise 72544 octets (28%), 2623 octets (31%) de mémoire dynamique
 
 	Philippe CORBEL
 	10/03/2020
@@ -17,6 +15,8 @@
 
 	si ??besoin?? activer intruauto dans IntruF() et IntruD() voir PNV2
 	----------------------------------------------
+  V3-12 07/01/2021 pas installé
+  externalisation données
   
   V3-11 29/08/2020 installé boitier de test
   03/09/2020 installé X4573
@@ -175,7 +175,7 @@
   modification marquées PhC
 */
 
-String ver = "V3-11";
+String ver = "V3-12";
 int Magique = 15;
 
 #include <Adafruit_FONA.h>			// gestion carte GSM Fona SIM800/808
@@ -187,6 +187,7 @@ int Magique = 15;
 #include <TimeAlarms.h>					// gestion des Alarmes
 #include <avr/wdt.h>						// watchdog uniquement pour Reset
 #include <ArduinoJson.h>
+#include "credentials_mqtt.h"
 
 /*  FONA_RX       2	==>     mega14 TX3
 		FONA_TX       3	==>     mega15 RX3
@@ -211,11 +212,6 @@ int Magique = 15;
 #define Op_PIR2				28				// Sortie Alimentation PIR2
 #define Op_PIR3				32				// Sortie Alimentation PIR1
 #define Op_PIR4				36				// Sortie Alimentation PIR2
-
-#define AIO_USERNAME "TpcfUser" // variables impossible a transferer vers lib ADAFRUIT
-#define AIO_PASS "hU4zHox1iHCDHM2"
-#define AIO_SERVERPORT  5335
-#define AIO_TOPIC  "localisation"
 
 /************ Global State (you don't need to change this!) ******************/
 // You don't need to change anything below this line!
@@ -456,11 +452,7 @@ void setup() {
     String tempapn          = "free";//"sl2sfr";//"free";
     String tempUser         = "";
     String tempPass         = "";
-    String tempmqttServer   = "exploitation.tpcf.fr";//"philippeco.hopto.org";
-    String tempmqttUserName = "TpcfUser";        // pas utilisé
-    String tempmqttPass     = "hU4zHox1iHCDHM2"; // pas utilisé
-    String temptopic        = "localisation";    // pas utilisé
-    config.mqttPort         = 5335;//1883        // pas utilisé
+    config.mqttPort         = tempmqttPort;
     config.cptAla           = 10; // 11*Acquisition time
     tempapn.toCharArray(config.apn, (tempapn.length() + 1));
     tempUser.toCharArray(config.gprsUser, (tempUser.length() + 1));
@@ -1833,8 +1825,6 @@ FinLSTPOSPN:
       }
       else if (textesms.indexOf("MQTTDATA") > -1) { // Parametres MQTT seul serveur peut etre changé
         // Parametres MQTTDATA=Serveur:User:Pass:Topic:port
-        // MQTTDATA=philippeco.hopto.org:TpcfUser:hU4zHox1iHCDHM2:localisation:1883
-        // {"MQTTDATA":{"serveur":"philippeco.hopto.org","user":"TpcfUser","pass":"hU4zHox1iHCDHM2","topic":"localisation","port":1883}}
         bool erreur = false;
         bool formatsms = false;
         if (textesms.indexOf(":") == 11) { // format json
@@ -1922,7 +1912,7 @@ FinLSTPOSPN:
       }
       else if (textesms.indexOf("MQTTSERVEUR") == 0) { // Serveur MQTT
         // case sensitive
-        // MQTTSERVEUR=philippeco.hopto.org
+        // MQTTSERVEUR=abcd.org
         if (textesms.indexOf(char(61)) == 11) {
           Sbidon = textesms.substring(12);
           Sbidon.toCharArray(config.mqttServer, (Sbidon.length() + 1));
