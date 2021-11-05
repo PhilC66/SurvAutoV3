@@ -17,6 +17,8 @@
 	----------------------------------------------
   V3-12 07/01/2021 pas installé
   externalisation données
+  12/06/2021
+  course fantaisiste à l'arret, memorisation du dernier course si vitesse = 0
   
   V3-11 29/08/2020 installé boitier de test
   03/09/2020 installé X4573
@@ -2575,6 +2577,7 @@ bool HeureEte() {
 }
 //---------------------------------------------------------------------------
 void decodeGPS() {
+  static float lastheading = 0;
   bool fix = 0;
   int i = 0;
   int j = 0;
@@ -2617,6 +2620,12 @@ void decodeGPS() {
   i = dataGPS.indexOf(",", i + 1);
   j = dataGPS.indexOf(",", i + 1);
   heading		= dataGPS.substring(i + 1, j).toFloat();
+  
+  if (speed == 0){ // evité course fantaisiste à l'arret, recopie course precedent
+    heading = lastheading;
+  }
+  lastheading = heading;
+  
   if (fix) {
     AlarmeGps = false;
   } else {
