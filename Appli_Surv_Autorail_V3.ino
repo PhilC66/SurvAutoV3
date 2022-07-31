@@ -1,10 +1,11 @@
 /*
-  29/08/2020
-  IDE 1.8.10, AVR boards 1.8.1, PC fixe
-	Le croquis utilise 72570 octets (28%), 2649 octets (32%) de mémoire dynamique
+  28/07/2022
 
-	IDE 1.8.10 Raspi, AVR boards 1.8.1, Raspi
-	Le croquis utilise 72544 octets (28%), 2623 octets (31%) de mémoire dynamique
+	IDE 1.8.19 Raspi, AVR boards 1.8.4, PC
+  Le croquis utilise 74170 octets (29%), 2595 octets (31%) de mémoire dynamique
+  
+	IDE 1.8.16 Raspi, AVR boards 1.8.4, Raspi
+	Le croquis utilise 74162 octets (28%), 2585 octets (31%) de mémoire dynamique
 
 	Philippe CORBEL
 	10/03/2020
@@ -15,7 +16,10 @@
 
 	si ??besoin?? activer intruauto dans IntruF() et IntruD() voir PNV2
 	----------------------------------------------
-  V3-12 07/01/2021 pas installé
+  V3-12-2 28/07/2022 installé ancien boitier X4607 devenu spare, 29/07/2022 installé X4607
+  ajouté print dans procedure ResetSimm800!
+  
+  V3-12 07/01/2021 installé 07/03/2022 boitier spare -> X4607 15/05/2022
   externalisation données
   12/06/2021
   course fantaisiste à l'arret, memorisation du dernier course si vitesse = 0
@@ -177,7 +181,7 @@
   modification marquées PhC
 */
 
-String ver = "V3-12";
+String ver = "V3-12-2";
 int Magique = 15;
 
 #include <Adafruit_FONA.h>			// gestion carte GSM Fona SIM800/808
@@ -2992,6 +2996,7 @@ void messageId() { // V2-21
 }
 //--------------------------------------------------------------------------------//
 void ResetSIM800() { // V2-19
+  Serial.println("passage dans ResetSim800!");
   fonaSerial -> println(F("AT+CFUN=1,1"));
   Alarm.delay(1000);
   fonaSerial -> println(F("AT+CLTS=1"));
